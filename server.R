@@ -5,44 +5,10 @@ shinyServer(function(input, output) {
   state <- reactiveValues()
   state$matos <- matos
   
-  for (eqId in matos$equipment$id) {
-    observeEvent(
-      input[[str_c('delete_', eqId)]]
-      ,{
-        state$matos$equipment %<>% filter(id != eqId)
-        print(state$matos)
-        matos <- state$matos
-        save(matos, file = 'data/matos.RData')
-      }
-    )
-    
-    observeEvent(
-      input[[str_c('rent_', eqId)]]
-      ,{
-        state$matos$equipment$hasit[state$matos$equipment$id == eqId] <- 
-          input[[str_c('renter_', eqId)]]
-        print(state$matos)
-        matos <- state$matos
-        save(matos, file = 'data/matos.RData')
-      }
-    )
-    
-    observeEvent(
-      input[[str_c('unlog_', eqId)]]
-      ,{
-        state$matos$equipment$hasit[state$matos$equipment$id == eqId] <- ''
-        print(state$matos)
-        matos <- state$matos
-        save(matos, file = 'data/matos.RData')
-      }
-    )
-  }
-  
-  # Update state
-  observe({
-    matos <- state$matos
-    
-    for (eqId in state$matos$equipment$id) {
+  for (equipmentId in matos$equipment$id) {
+    local({
+      eqId <- equipmentId
+      # Delete equipment
       observeEvent(
         input[[str_c('delete_', eqId)]]
         ,{
@@ -52,7 +18,8 @@ shinyServer(function(input, output) {
           save(matos, file = 'data/matos.RData')
         }
       )
-      
+        
+      # Rent equipment
       observeEvent(
         input[[str_c('rent_', eqId)]]
         ,{
@@ -64,10 +31,81 @@ shinyServer(function(input, output) {
         }
       )
       
+      # Unlog equipment
       observeEvent(
         input[[str_c('unlog_', eqId)]]
         ,{
           state$matos$equipment$hasit[state$matos$equipment$id == eqId] <- ''
+          print(state$matos)
+          matos <- state$matos
+          save(matos, file = 'data/matos.RData')
+        }
+      )
+    })
+  }
+  
+  for (categoryId in matos$category$id) {
+    local({
+      catId <- categoryId
+      # Delete category
+      observeEvent(
+        input[[str_c('delcat_', catId)]]
+        ,{
+          state$matos$category %<>% filter(id != catId)
+          print(state$matos)
+          matos <- state$matos
+          save(matos, file = 'data/matos.RData')
+        }
+      )
+    })
+  }
+  
+  # Update state
+  observe({
+    matos <- state$matos
+    
+    for (eqId in state$matos$equipment$id) {
+      # Delete equipment
+      observeEvent(
+        input[[str_c('delete_', eqId)]]
+        ,{
+          state$matos$equipment %<>% filter(id != eqId)
+          print(state$matos)
+          matos <- state$matos
+          save(matos, file = 'data/matos.RData')
+        }
+      )
+        
+      # Rent equipment
+      observeEvent(
+        input[[str_c('rent_', eqId)]]
+        ,{
+          state$matos$equipment$hasit[state$matos$equipment$id == eqId] <- 
+            input[[str_c('renter_', eqId)]]
+          print(state$matos)
+          matos <- state$matos
+          save(matos, file = 'data/matos.RData')
+        }
+      )
+      
+      # Unlog equipment
+      observeEvent(
+        input[[str_c('unlog_', eqId)]]
+        ,{
+          state$matos$equipment$hasit[state$matos$equipment$id == eqId] <- ''
+          print(state$matos)
+          matos <- state$matos
+          save(matos, file = 'data/matos.RData')
+        }
+      )
+    }
+    
+    for (catId in state$matos$category$id) {
+      # Delete category
+      observeEvent(
+        input[[str_c('delcat_', catId)]]
+        ,{
+          state$matos$category %<>% filter(id != catId)
           print(state$matos)
           matos <- state$matos
           save(matos, file = 'data/matos.RData')
@@ -119,7 +157,7 @@ shinyServer(function(input, output) {
           fluidRow(
             column(
               4
-              ,tags$h3(.$name)
+              ,tags$h3(str_c(.$name, ' #', .$number))
               ,tags$p(.$category)
             )
             ,column(
@@ -155,8 +193,31 @@ shinyServer(function(input, output) {
     do.call(tagList, equipTags)
   })
   
+  output$categoryList <- renderUI({
+    categories <- state$matos$category
+    if (is.null(categories) || length(categories) == 0) {
+      return(NULL)
+    } 
+    categoryTags <- categories %>% rowwise %>% do(tag = {
+      tags$div(
+        fluidRow(
+          column(
+            8
+            ,tags$h3(.$name)
+          )
+          ,column(
+            4  
+            ,actionButton(str_c('delcat_', .$id), 'DELETE', style='margin-top: 16px;')
+          )
+        )
+        ,tags$hr()
+      )
+    }) %>% `[[`('tag') %>% as.list
+    do.call(tagList, categoryTags)
+  })
+  
   output$selectCategory <- renderUI({
-    selectInput('newEquipmentCategory', 'Equipment category', state$matos$category$name, width = '100%')
+    selectInput('newEquipmentCategory', 'Equipment category', state$matos$category$name)
   })
   
 })
